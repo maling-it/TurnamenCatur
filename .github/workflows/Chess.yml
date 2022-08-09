@@ -1,0 +1,53 @@
+name: Chess
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.issue.title, 'Chess:')
+
+    steps:
+      # Set up environment variables
+      - name: Setting up environment
+        run: |
+          echo ISSUE_NUMBER="${{ github.event.issue.number }}" >> $GITHUB_ENV
+          echo GITHUB_TOKEN="${{ secrets.TOKEN }}" >> $GITHUB_ENV
+          echo REPOSITORY_OWNER="${{ github.repository_owner }}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v2
+
+      # Set up a Python 3.8 (64-bit) instance
+      - name: Setting up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+          architecture: "x64"
+
+      # Use pip to install the dependencies and then run the script
+      - name: Play chess
+        run: |
+          pip install -r requirements.txt
+          python main.py
+      # Sign GPG key (Optional u can delete it)
+      -
+        name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v4
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      # Create new commit with the changed files and push it to GitHub
+      - name: Commit and push changes
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          git config --global user.name "Memet Zx"
+          git config --global user.email "memetpea25@gmail.com"
+          git add .
+          git commit -sm "${ISSUE_TITLE} by ${{ github.event.issue.user.login }}"
+          git push
